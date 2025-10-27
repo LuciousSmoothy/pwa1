@@ -90,11 +90,17 @@ function setupEventForm() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        // Combine date and time fields
+        const startDate = document.getElementById('eventStartDate').value;
+        const startTime = document.getElementById('eventStartTime').value;
+        const endDate = document.getElementById('eventEndDate').value;
+        const endTime = document.getElementById('eventEndTime').value;
+
         const eventData = {
             title: document.getElementById('eventTitle').value,
             description: document.getElementById('eventDescription').value,
-            startDate: document.getElementById('eventStart').value,
-            endDate: document.getElementById('eventEnd').value,
+            startDate: `${startDate}T${startTime}`,
+            endDate: `${endDate}T${endTime}`,
             category: document.getElementById('eventCategory').value,
             location: document.getElementById('eventLocation').checked ? currentLocation : null
         };
@@ -117,17 +123,23 @@ function setupEventForm() {
     addToCalendarBtn.addEventListener('click', async () => {
         const title = document.getElementById('eventTitle').value;
         const description = document.getElementById('eventDescription').value;
-        const startDate = document.getElementById('eventStart').value;
-        const endDate = document.getElementById('eventEnd').value;
+        const startDate = document.getElementById('eventStartDate').value;
+        const startTime = document.getElementById('eventStartTime').value;
+        const endDate = document.getElementById('eventEndDate').value;
+        const endTime = document.getElementById('eventEndTime').value;
 
-        if (!title || !startDate || !endDate) {
+        if (!title || !startDate || !startTime || !endDate || !endTime) {
             showToast('Please fill in all required fields', 'error');
             return;
         }
 
+        // Combine date and time
+        const startDateTime = `${startDate}T${startTime}`;
+        const endDateTime = `${endDate}T${endTime}`;
+
         try {
             // Create ICS file for calendar
-            const icsContent = generateICS(title, description, startDate, endDate);
+            const icsContent = generateICS(title, description, startDateTime, endDateTime);
             const blob = new Blob([icsContent], { type: 'text/calendar' });
             const url = URL.createObjectURL(blob);
 

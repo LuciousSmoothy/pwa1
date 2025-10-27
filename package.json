@@ -1,0 +1,24 @@
+{
+  "name": "event-reminder-pwa",
+  "version": "1.0.0",
+  "description": "A Progressive Web App for managing events, reminders, and exploring device features",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8000 -c-1",
+    "dev": "npx http-server -p 8000 -c-1 -o"
+  },
+  "keywords": [
+    "pwa",
+    "progressive-web-app",
+    "calendar",
+    "reminders",
+    "geolocation",
+    "camera",
+    "indexeddb"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

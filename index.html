@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2196F3">
+    <meta name="description" content="A Progressive Web App for managing events, reminders, and exploring device features">
+    <title>Event & Reminder PWA</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- iOS Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Event PWA">
+
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>📱 Event & Reminder App</h1>
+            <div class="install-prompt" id="installPrompt" style="display: none;">
+                <button id="installBtn">Install App</button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="events">📅 Events</button>
+            <button class="tab-btn" data-tab="reminders">📍 Reminders</button>
+            <button class="tab-btn" data-tab="features">🎥 Features</button>
+            <button class="tab-btn" data-tab="analytics">📊 Analytics</button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+
+            <!-- Events Tab -->
+            <section id="events-tab" class="tab-content active">
+                <h2>Calendar Events</h2>
+
+                <div class="card">
+                    <h3>Create New Event</h3>
+                    <form id="eventForm">
+                        <div class="form-group">
+                            <label for="eventTitle">Event Title</label>
+                            <input type="text" id="eventTitle" required placeholder="e.g., Team Meeting">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventDescription">Description</label>
+                            <textarea id="eventDescription" placeholder="Event details..."></textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="eventStart">Start Date & Time</label>
+                                <input type="datetime-local" id="eventStart" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="eventEnd">End Date & Time</label>
+                                <input type="datetime-local" id="eventEnd" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="eventCategory">Category</label>
+                            <select id="eventCategory">
+                                <option value="work">Work</option>
+                                <option value="personal">Personal</option>
+                                <option value="shopping">Shopping</option>
+                                <option value="health">Health</option>
+                                <option value="social">Social</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="eventLocation">
+                                Add current location
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Save Event</button>
+                        <button type="button" id="addToCalendarBtn" class="btn btn-secondary">Add to Device Calendar</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h3>Your Events</h3>
+                    <div id="eventsList" class="events-list">
+                        <p class="empty-state">No events yet. Create your first event above!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reminders Tab -->
+            <section id="reminders-tab" class="tab-content">
+                <h2>Location-Based Reminders</h2>
+
+                <div class="card">
+                    <h3>Create Reminder List</h3>
+                    <form id="reminderForm">
+                        <div class="form-group">
+                            <label for="listName">List Name</label>
+                            <input type="text" id="listName" required placeholder="e.g., Grocery Store">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="listCategory">Category</label>
+                            <select id="listCategory">
+                                <option value="grocery">Grocery</option>
+                                <option value="pharmacy">Pharmacy</option>
+                                <option value="hardware">Hardware Store</option>
+                                <option value="errands">Errands</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="reminderItems">Items (one per line)</label>
+                            <textarea id="reminderItems" rows="5" placeholder="Milk&#10;Eggs&#10;Bread"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="button" id="captureLocationBtn" class="btn btn-secondary">
+                                📍 Capture Current Location
+                            </button>
+                            <span id="locationStatus"></span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Save Reminder List</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h3>Your Reminder Lists</h3>
+                    <div id="remindersList" class="reminders-list">
+                        <p class="empty-state">No reminders yet. Create your first list above!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Device Features Tab -->
+            <section id="features-tab" class="tab-content">
+                <h2>Device Features Explorer</h2>
+
+                <div class="card">
+                    <h3>📷 Camera</h3>
+                    <button id="takePictureBtn" class="btn btn-primary">Take Picture</button>
+                    <div id="cameraPreview" class="preview-area"></div>
+                </div>
+
+                <div class="card">
+                    <h3>🎤 Audio Recording</h3>
+                    <button id="startRecordingBtn" class="btn btn-primary">Start Recording</button>
+                    <button id="stopRecordingBtn" class="btn btn-secondary" disabled>Stop Recording</button>
+                    <div id="audioPreview" class="preview-area"></div>
+                </div>
+
+                <div class="card">
+                    <h3>📍 Geolocation</h3>
+                    <button id="getLocationBtn" class="btn btn-primary">Get Current Location</button>
+                    <div id="locationPreview" class="preview-area"></div>
+                </div>
+
+                <div class="card">
+                    <h3>📳 Device Capabilities</h3>
+                    <div id="capabilitiesInfo" class="info-area">
+                        <p>Loading device capabilities...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Tab -->
+            <section id="analytics-tab" class="tab-content">
+                <h2>Analytics Dashboard</h2>
+
+                <div class="card">
+                    <h3>Event Statistics</h3>
+                    <div id="eventStats" class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-value" id="totalEvents">0</span>
+                            <span class="stat-label">Total Events</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="upcomingEvents">0</span>
+                            <span class="stat-label">Upcoming</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="totalReminders">0</span>
+                            <span class="stat-label">Reminder Lists</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Events by Category</h3>
+                    <div id="categoryBreakdown" class="category-breakdown"></div>
+                </div>
+
+                <div class="card">
+                    <h3>Recent Activity</h3>
+                    <div id="recentActivity" class="activity-list"></div>
+                </div>
+
+                <div class="card">
+                    <button id="exportDataBtn" class="btn btn-primary">Export All Data (JSON)</button>
+                    <button id="clearDataBtn" class="btn btn-danger">Clear All Data</button>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/db.js"></script>
+    <script src="/app.js"></script>
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('Service Worker registered', reg))
+                .catch(err => console.error('Service Worker registration failed', err));
+        }
+    </script>
+</body>
+</html>

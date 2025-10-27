@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PWA Icons</title>
+</head>
+<body>
+    <h1>Generating PWA Icons...</h1>
+    <p>Icons will be generated automatically.</p>
+
+    <script>
+        const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+
+        sizes.forEach(size => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            // Gradient background
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#2196F3');
+            gradient.addColorStop(1, '#1976D2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // Add icon text
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('📱', size / 2, size / 2);
+
+            // Convert to blob and download
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `icon-${size}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        });
+
+        document.body.innerHTML += '<p>All icons generated! Check your downloads folder.</p>';
+    </script>
+</body>
+</html>

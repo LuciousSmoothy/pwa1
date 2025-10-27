@@ -55,27 +55,49 @@
                             <textarea id="eventDescription" placeholder="Event details..."></textarea>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="eventStartDate">Start Date</label>
+                        <div class="form-group">
+                            <label>Start Date & Time</label>
+                            <div class="datetime-input-group">
                                 <input type="date" id="eventStartDate" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="eventStartTime">Start Time</label>
                                 <input type="time" id="eventStartTime" required>
                             </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="eventEndDate">End Date</label>
-                                <input type="date" id="eventEndDate" required>
+                        <div class="form-group">
+                            <label>End Time Options</label>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="endTimeOption" value="duration" checked>
+                                    <span>Duration</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="endTimeOption" value="custom">
+                                    <span>Custom End Time</span>
+                                </label>
                             </div>
+                        </div>
 
-                            <div class="form-group">
-                                <label for="eventEndTime">End Time</label>
-                                <input type="time" id="eventEndTime" required>
+                        <div id="durationSection" class="form-group">
+                            <label for="eventDuration">Duration</label>
+                            <select id="eventDuration">
+                                <option value="0.5">30 minutes</option>
+                                <option value="1" selected>1 hour</option>
+                                <option value="1.5">1.5 hours</option>
+                                <option value="2">2 hours</option>
+                                <option value="3">3 hours</option>
+                                <option value="4">4 hours</option>
+                                <option value="6">6 hours</option>
+                                <option value="8">8 hours</option>
+                                <option value="12">12 hours</option>
+                                <option value="24">1 day</option>
+                            </select>
+                        </div>
+
+                        <div id="customEndSection" class="form-group" style="display: none;">
+                            <label>End Date & Time</label>
+                            <div class="datetime-input-group">
+                                <input type="date" id="eventEndDate">
+                                <input type="time" id="eventEndTime">
                             </div>
                         </div>
 

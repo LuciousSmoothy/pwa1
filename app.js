@@ -86,21 +86,75 @@ function setupTabNavigation() {
 function setupEventForm() {
     const form = document.getElementById('eventForm');
     const addToCalendarBtn = document.getElementById('addToCalendarBtn');
+    const durationSection = document.getElementById('durationSection');
+    const customEndSection = document.getElementById('customEndSection');
+    const endTimeOptions = document.getElementsByName('endTimeOption');
+
+    // Handle radio button toggle
+    endTimeOptions.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.value === 'duration') {
+                durationSection.style.display = 'block';
+                customEndSection.style.display = 'none';
+                // Clear custom end fields
+                document.getElementById('eventEndDate').value = '';
+                document.getElementById('eventEndTime').value = '';
+            } else {
+                durationSection.style.display = 'none';
+                customEndSection.style.display = 'block';
+            }
+        });
+    });
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // Combine date and time fields
+        // Get start date and time
         const startDate = document.getElementById('eventStartDate').value;
         const startTime = document.getElementById('eventStartTime').value;
-        const endDate = document.getElementById('eventEndDate').value;
-        const endTime = document.getElementById('eventEndTime').value;
+
+        if (!startDate || !startTime) {
+            showToast('Please fill in start date and time', 'error');
+            return;
+        }
+
+        const startDateTime = `${startDate}T${startTime}`;
+        let endDateTime;
+
+        // Determine end time based on selected option
+        const endTimeOption = document.querySelector('input[name="endTimeOption"]:checked').value;
+
+        if (endTimeOption === 'duration') {
+            // Calculate end time based on duration
+            const duration = parseFloat(document.getElementById('eventDuration').value);
+            const startDateObj = new Date(startDateTime);
+            const endDateObj = new Date(startDateObj.getTime() + (duration * 60 * 60 * 1000));
+
+            // Format to YYYY-MM-DDTHH:MM
+            const year = endDateObj.getFullYear();
+            const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(endDateObj.getDate()).padStart(2, '0');
+            const hours = String(endDateObj.getHours()).padStart(2, '0');
+            const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
+            endDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        } else {
+            // Use custom end date/time
+            const endDate = document.getElementById('eventEndDate').value;
+            const endTime = document.getElementById('eventEndTime').value;
+
+            if (!endDate || !endTime) {
+                showToast('Please fill in end date and time', 'error');
+                return;
+            }
+
+            endDateTime = `${endDate}T${endTime}`;
+        }
 
         const eventData = {
             title: document.getElementById('eventTitle').value,
             description: document.getElementById('eventDescription').value,
-            startDate: `${startDate}T${startTime}`,
-            endDate: `${endDate}T${endTime}`,
+            startDate: startDateTime,
+            endDate: endDateTime,
             category: document.getElementById('eventCategory').value,
             location: document.getElementById('eventLocation').checked ? currentLocation : null
         };
@@ -111,6 +165,10 @@ function setupEventForm() {
 
             showToast('Event created successfully!', 'success');
             form.reset();
+            // Reset to duration option
+            document.querySelector('input[name="endTimeOption"][value="duration"]').checked = true;
+            durationSection.style.display = 'block';
+            customEndSection.style.display = 'none';
             await loadEvents();
             await updateAnalytics();
         } catch (error) {
@@ -125,17 +183,43 @@ function setupEventForm() {
         const description = document.getElementById('eventDescription').value;
         const startDate = document.getElementById('eventStartDate').value;
         const startTime = document.getElementById('eventStartTime').value;
-        const endDate = document.getElementById('eventEndDate').value;
-        const endTime = document.getElementById('eventEndTime').value;
 
-        if (!title || !startDate || !startTime || !endDate || !endTime) {
-            showToast('Please fill in all required fields', 'error');
+        if (!title || !startDate || !startTime) {
+            showToast('Please fill in title, start date, and start time', 'error');
             return;
         }
 
-        // Combine date and time
         const startDateTime = `${startDate}T${startTime}`;
-        const endDateTime = `${endDate}T${endTime}`;
+        let endDateTime;
+
+        // Determine end time based on selected option
+        const endTimeOption = document.querySelector('input[name="endTimeOption"]:checked').value;
+
+        if (endTimeOption === 'duration') {
+            // Calculate end time based on duration
+            const duration = parseFloat(document.getElementById('eventDuration').value);
+            const startDateObj = new Date(startDateTime);
+            const endDateObj = new Date(startDateObj.getTime() + (duration * 60 * 60 * 1000));
+
+            // Format to YYYY-MM-DDTHH:MM
+            const year = endDateObj.getFullYear();
+            const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(endDateObj.getDate()).padStart(2, '0');
+            const hours = String(endDateObj.getHours()).padStart(2, '0');
+            const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
+            endDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        } else {
+            // Use custom end date/time
+            const endDate = document.getElementById('eventEndDate').value;
+            const endTime = document.getElementById('eventEndTime').value;
+
+            if (!endDate || !endTime) {
+                showToast('Please fill in end date and time', 'error');
+                return;
+            }
+
+            endDateTime = `${endDate}T${endTime}`;
+        }
 
         try {
             // Create ICS file for calendar

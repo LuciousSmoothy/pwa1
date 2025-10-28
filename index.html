@@ -71,6 +71,20 @@
                 <div id="weekView" class="week-view" style="display: none;">
                     <!-- Week view will be rendered here -->
                 </div>
+
+                <div id="dayView" class="day-view" style="display: none;">
+                    <div class="day-view-header">
+                        <button id="backToCalendar" class="btn btn-secondary">← Back to Calendar</button>
+                        <h3 id="dayViewDate">Loading...</h3>
+                        <button id="createEventBtn" class="btn btn-primary">+ Create Event</button>
+                    </div>
+
+                    <div class="day-view-container">
+                        <div id="dayViewGrid" class="day-view-grid">
+                            <!-- Day view time slots will be rendered here -->
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Events Tab -->
@@ -288,6 +302,98 @@
 
         <!-- Toast Notification -->
         <div id="toast" class="toast"></div>
+
+        <!-- Event Modal -->
+        <div id="eventModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Create Event</h3>
+                    <button class="modal-close" id="closeModal">&times;</button>
+                </div>
+
+                <form id="modalEventForm">
+                    <div class="form-group">
+                        <label for="modalEventTitle">Event Title</label>
+                        <input type="text" id="modalEventTitle" required placeholder="e.g., Team Meeting">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modalEventDescription">Description</label>
+                        <textarea id="modalEventDescription" placeholder="Event details..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Start Date & Time</label>
+                        <div class="datetime-input-group">
+                            <input type="date" id="modalEventStartDate" required>
+                            <input type="time" id="modalEventStartTime" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>End Time Options</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="modalEndTimeOption" value="duration" checked>
+                                <span>Duration</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="modalEndTimeOption" value="custom">
+                                <span>Custom End Time</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="modalDurationSection" class="form-group">
+                        <label for="modalEventDuration">Duration</label>
+                        <select id="modalEventDuration">
+                            <option value="0.5">30 minutes</option>
+                            <option value="1" selected>1 hour</option>
+                            <option value="1.5">1.5 hours</option>
+                            <option value="2">2 hours</option>
+                            <option value="3">3 hours</option>
+                            <option value="4">4 hours</option>
+                            <option value="6">6 hours</option>
+                            <option value="8">8 hours</option>
+                            <option value="12">12 hours</option>
+                            <option value="24">1 day</option>
+                        </select>
+                    </div>
+
+                    <div id="modalCustomEndSection" class="form-group" style="display: none;">
+                        <label>End Date & Time</label>
+                        <div class="datetime-input-group">
+                            <input type="date" id="modalEventEndDate">
+                            <input type="time" id="modalEventEndTime">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="modalEventCategory">Category</label>
+                        <select id="modalEventCategory">
+                            <option value="work">Work</option>
+                            <option value="personal">Personal</option>
+                            <option value="shopping">Shopping</option>
+                            <option value="health">Health</option>
+                            <option value="social">Social</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="modalEventLocation">
+                            Add current location
+                        </label>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancelModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Event</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->

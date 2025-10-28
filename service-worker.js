@@ -1,4 +1,4 @@
-const CACHE_NAME = 'event-pwa-v5';
+const CACHE_NAME = 'event-pwa-v6';
 const urlsToCache = [
   '/',
   '/index.html',

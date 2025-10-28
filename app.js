@@ -8,7 +8,8 @@ let currentLocation = null;
 let mediaRecorder = null;
 let audioChunks = [];
 let currentDate = new Date();
-let currentView = 'month'; // 'month' or 'week'
+let currentView = 'month'; // 'month', 'week', or 'day'
+let selectedDayDate = null;
 
 /**
  * Initialize the application
@@ -24,6 +25,8 @@ async function initApp() {
     // Set up event listeners
     setupTabNavigation();
     setupCalendar();
+    setupDayView();
+    setupEventModal();
     setupEventForm();
     setupReminderForm();
     setupDeviceFeatures();
@@ -393,11 +396,211 @@ function showDayEvents(date, events) {
 }
 
 /**
- * Create Event For Date
+ * Day View Setup
  */
-function createEventForDate(date) {
-    // Switch to events tab
-    document.querySelector('.tab-btn[data-tab="events"]').click();
+function setupDayView() {
+    const backToCalendarBtn = document.getElementById('backToCalendar');
+    const createEventBtn = document.getElementById('createEventBtn');
+
+    backToCalendarBtn.addEventListener('click', () => {
+        showCalendarView();
+    });
+
+    createEventBtn.addEventListener('click', () => {
+        if (selectedDayDate) {
+            openEventModal(selectedDayDate);
+        }
+    });
+}
+
+/**
+ * Show Day View
+ */
+async function showDayView(date) {
+    selectedDayDate = date;
+    currentView = 'day';
+
+    // Hide calendar views
+    document.getElementById('calendarGrid').style.display = 'none';
+    document.getElementById('weekView').style.display = 'none';
+    document.getElementById('dayView').style.display = 'block';
+
+    // Render day view
+    await renderDayView(date);
+}
+
+/**
+ * Show Calendar View
+ */
+function showCalendarView() {
+    currentView = 'month';
+    document.getElementById('calendarGrid').style.display = 'grid';
+    document.getElementById('weekView').style.display = 'none';
+    document.getElementById('dayView').style.display = 'none';
+
+    // Reset view buttons
+    document.getElementById('monthViewBtn').classList.add('active');
+    document.getElementById('weekViewBtn').classList.remove('active');
+}
+
+/**
+ * Render Day View
+ */
+async function renderDayView(date) {
+    const dayViewDate = document.getElementById('dayViewDate');
+    const dayViewGrid = document.getElementById('dayViewGrid');
+
+    // Update header
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+    dayViewDate.textContent = `${dayNames[date.getDay()]}, ${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+
+    // Get events for this day
+    const events = await db.getAll('events');
+    const dayEvents = events.filter(event => {
+        const eventDate = new Date(event.startDate);
+        return eventDate.toDateString() === date.toDateString();
+    });
+
+    // Clear grid
+    dayViewGrid.innerHTML = '';
+
+    // Create hourly time slots (12 AM to 11 PM)
+    const currentHour = new Date().getHours();
+    const currentDay = new Date().toDateString();
+    const isToday = date.toDateString() === currentDay;
+
+    for (let hour = 0; hour < 24; hour++) {
+        const timeSlot = document.createElement('div');
+        timeSlot.className = 'time-slot';
+
+        // Time label
+        const timeLabel = document.createElement('div');
+        timeLabel.className = 'time-label';
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        timeLabel.textContent = `${displayHour} ${ampm}`;
+
+        // Time block
+        const timeBlock = document.createElement('div');
+        timeBlock.className = 'time-block';
+        timeBlock.dataset.hour = hour;
+
+        if (isToday && hour === currentHour) {
+            timeBlock.classList.add('current-hour');
+        }
+
+        // Find events in this hour
+        const hourEvents = dayEvents.filter(event => {
+            const eventStart = new Date(event.startDate);
+            return eventStart.getHours() === hour;
+        });
+
+        // Add events to this hour
+        hourEvents.forEach(event => {
+            const eventEl = document.createElement('div');
+            eventEl.className = `day-view-event category-${event.category}`;
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'day-view-event-title';
+            titleEl.textContent = event.title;
+
+            const timeEl = document.createElement('div');
+            timeEl.className = 'day-view-event-time';
+            const startTime = new Date(event.startDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const endTime = new Date(event.endDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            timeEl.textContent = `${startTime} - ${endTime}`;
+
+            eventEl.appendChild(titleEl);
+            eventEl.appendChild(timeEl);
+
+            eventEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showEventDetails(event);
+            });
+
+            timeBlock.appendChild(eventEl);
+        });
+
+        // Click to create event at this time
+        timeBlock.addEventListener('click', () => {
+            const clickedDate = new Date(date);
+            clickedDate.setHours(hour, 0, 0, 0);
+            openEventModal(clickedDate, hour);
+        });
+
+        dayViewGrid.appendChild(timeLabel);
+        dayViewGrid.appendChild(timeBlock);
+    }
+
+    // Scroll to 5 AM by default (or current hour if today)
+    const scrollToHour = isToday ? Math.max(currentHour - 2, 0) : 5;
+    const scrollTarget = dayViewGrid.querySelector(`[data-hour="${scrollToHour}"]`);
+    if (scrollTarget) {
+        setTimeout(() => {
+            scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
+}
+
+/**
+ * Event Modal Setup
+ */
+function setupEventModal() {
+    const modal = document.getElementById('eventModal');
+    const closeBtn = document.getElementById('closeModal');
+    const cancelBtn = document.getElementById('cancelModal');
+    const modalForm = document.getElementById('modalEventForm');
+    const modalDurationSection = document.getElementById('modalDurationSection');
+    const modalCustomEndSection = document.getElementById('modalCustomEndSection');
+    const modalEndTimeOptions = document.getElementsByName('modalEndTimeOption');
+
+    // Handle radio button toggle
+    modalEndTimeOptions.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.value === 'duration') {
+                modalDurationSection.style.display = 'block';
+                modalCustomEndSection.style.display = 'none';
+            } else {
+                modalDurationSection.style.display = 'none';
+                modalCustomEndSection.style.display = 'block';
+            }
+        });
+    });
+
+    // Close modal
+    const closeModal = () => {
+        modal.style.display = 'none';
+        modalForm.reset();
+        modalDurationSection.style.display = 'block';
+        modalCustomEndSection.style.display = 'none';
+        document.querySelector('input[name="modalEndTimeOption"][value="duration"]').checked = true;
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Handle form submission
+    modalForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handleModalEventSubmit();
+        closeModal();
+    });
+}
+
+/**
+ * Open Event Modal
+ */
+function openEventModal(date, hour = null) {
+    const modal = document.getElementById('eventModal');
 
     // Populate date fields
     const year = date.getFullYear();
@@ -405,13 +608,97 @@ function createEventForDate(date) {
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
 
-    document.getElementById('eventStartDate').value = dateStr;
-    document.getElementById('eventEndDate').value = dateStr;
+    document.getElementById('modalEventStartDate').value = dateStr;
+    document.getElementById('modalEventEndDate').value = dateStr;
 
-    // Scroll to form
-    document.getElementById('eventForm').scrollIntoView({ behavior: 'smooth' });
+    // Set time if hour provided
+    if (hour !== null) {
+        const timeStr = String(hour).padStart(2, '0') + ':00';
+        document.getElementById('modalEventStartTime').value = timeStr;
+    }
 
-    showToast('Creating event for ' + date.toLocaleDateString(), 'info');
+    modal.style.display = 'flex';
+}
+
+/**
+ * Handle Modal Event Submit
+ */
+async function handleModalEventSubmit() {
+    // Get start date and time
+    const startDate = document.getElementById('modalEventStartDate').value;
+    const startTime = document.getElementById('modalEventStartTime').value;
+
+    if (!startDate || !startTime) {
+        showToast('Please fill in start date and time', 'error');
+        return;
+    }
+
+    const startDateTime = `${startDate}T${startTime}`;
+    let endDateTime;
+
+    // Determine end time based on selected option
+    const endTimeOption = document.querySelector('input[name="modalEndTimeOption"]:checked').value;
+
+    if (endTimeOption === 'duration') {
+        // Calculate end time based on duration
+        const duration = parseFloat(document.getElementById('modalEventDuration').value);
+        const startDateObj = new Date(startDateTime);
+        const endDateObj = new Date(startDateObj.getTime() + (duration * 60 * 60 * 1000));
+
+        // Format to YYYY-MM-DDTHH:MM
+        const year = endDateObj.getFullYear();
+        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(endDateObj.getDate()).padStart(2, '0');
+        const hours = String(endDateObj.getHours()).padStart(2, '0');
+        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
+        endDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+    } else {
+        // Use custom end date/time
+        const endDate = document.getElementById('modalEventEndDate').value;
+        const endTime = document.getElementById('modalEventEndTime').value;
+
+        if (!endDate || !endTime) {
+            showToast('Please fill in end date and time', 'error');
+            return;
+        }
+
+        endDateTime = `${endDate}T${endTime}`;
+    }
+
+    const eventData = {
+        title: document.getElementById('modalEventTitle').value,
+        description: document.getElementById('modalEventDescription').value,
+        startDate: startDateTime,
+        endDate: endDateTime,
+        category: document.getElementById('modalEventCategory').value,
+        location: document.getElementById('modalEventLocation').checked ? currentLocation : null
+    };
+
+    try {
+        const eventId = await db.add('events', eventData);
+        await db.logActivity('event_created', `Created event: ${eventData.title}`, { eventId });
+
+        showToast('Event created successfully!', 'success');
+
+        // Refresh views
+        await loadEvents();
+        await updateAnalytics();
+
+        // Refresh day view if showing
+        if (currentView === 'day' && selectedDayDate) {
+            await renderDayView(selectedDayDate);
+        }
+    } catch (error) {
+        console.error('Error creating event:', error);
+        showToast('Failed to create event', 'error');
+    }
+}
+
+/**
+ * Create Event For Date (Updated to show day view)
+ */
+function createEventForDate(date) {
+    showDayView(date);
 }
 
 /**

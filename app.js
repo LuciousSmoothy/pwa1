@@ -491,6 +491,8 @@ async function renderDayView(date) {
         hourEvents.forEach(event => {
             const eventEl = document.createElement('div');
             eventEl.className = `day-view-event category-${event.category}`;
+            eventEl.draggable = true;
+            eventEl.dataset.eventId = event.id;
 
             const titleEl = document.createElement('div');
             titleEl.className = 'day-view-event-title';
@@ -505,9 +507,22 @@ async function renderDayView(date) {
             eventEl.appendChild(titleEl);
             eventEl.appendChild(timeEl);
 
+            // Click to edit
             eventEl.addEventListener('click', (e) => {
                 e.stopPropagation();
                 showEventDetails(event);
+            });
+
+            // Drag and drop handlers
+            eventEl.addEventListener('dragstart', (e) => {
+                e.stopPropagation();
+                e.dataTransfer.setData('eventId', event.id);
+                e.dataTransfer.effectAllowed = 'move';
+                eventEl.style.opacity = '0.5';
+            });
+
+            eventEl.addEventListener('dragend', (e) => {
+                eventEl.style.opacity = '1';
             });
 
             timeBlock.appendChild(eventEl);
@@ -518,6 +533,28 @@ async function renderDayView(date) {
             const clickedDate = new Date(date);
             clickedDate.setHours(hour, 0, 0, 0);
             openEventModal(clickedDate, hour);
+        });
+
+        // Drop zone handlers
+        timeBlock.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            timeBlock.classList.add('drag-over');
+        });
+
+        timeBlock.addEventListener('dragleave', () => {
+            timeBlock.classList.remove('drag-over');
+        });
+
+        timeBlock.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            timeBlock.classList.remove('drag-over');
+
+            const eventId = parseInt(e.dataTransfer.getData('eventId'));
+            if (!eventId) return;
+
+            // Move event to this hour
+            await moveEventToHour(eventId, date, hour);
         });
 
         dayViewGrid.appendChild(timeLabel);
@@ -531,6 +568,58 @@ async function renderDayView(date) {
         setTimeout(() => {
             scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
+    }
+}
+
+/**
+ * Move Event To Hour (Drag & Drop)
+ */
+async function moveEventToHour(eventId, date, newHour) {
+    try {
+        // Get the event
+        const event = await db.get('events', eventId);
+        if (!event) {
+            showToast('Event not found', 'error');
+            return;
+        }
+
+        // Calculate the duration
+        const oldStart = new Date(event.startDate);
+        const oldEnd = new Date(event.endDate);
+        const durationMs = oldEnd - oldStart;
+
+        // Create new start date with the new hour
+        const newStart = new Date(date);
+        newStart.setHours(newHour, oldStart.getMinutes(), 0, 0);
+
+        // Calculate new end date
+        const newEnd = new Date(newStart.getTime() + durationMs);
+
+        // Format dates
+        const formatDate = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        };
+
+        // Update event
+        event.startDate = formatDate(newStart);
+        event.endDate = formatDate(newEnd);
+
+        await db.update('events', event);
+        await db.logActivity('event_moved', `Moved event: ${event.title} to ${newHour}:00`, { eventId });
+
+        showToast('Event rescheduled', 'success');
+
+        // Refresh day view
+        await renderDayView(selectedDayDate);
+        await loadEvents();
+    } catch (error) {
+        console.error('Error moving event:', error);
+        showToast('Failed to move event', 'error');
     }
 }
 

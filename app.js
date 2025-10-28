@@ -364,20 +364,10 @@ async function renderWeekView() {
 }
 
 /**
- * Show Event Details
+ * Show Event Details (Opens edit modal)
  */
 function showEventDetails(event) {
-    const message = `
-${event.title}
-
-${event.description || 'No description'}
-
-Start: ${formatDateTime(event.startDate)}
-End: ${formatDateTime(event.endDate)}
-Category: ${event.category}
-    `.trim();
-
-    alert(message);
+    openEventModalForEdit(event);
 }
 
 /**
@@ -551,10 +541,13 @@ function setupEventModal() {
     const modal = document.getElementById('eventModal');
     const closeBtn = document.getElementById('closeModal');
     const cancelBtn = document.getElementById('cancelModal');
+    const deleteBtn = document.getElementById('deleteEventBtn');
     const modalForm = document.getElementById('modalEventForm');
     const modalDurationSection = document.getElementById('modalDurationSection');
     const modalCustomEndSection = document.getElementById('modalCustomEndSection');
+    const modalRecurrenceEndSection = document.getElementById('modalRecurrenceEndSection');
     const modalEndTimeOptions = document.getElementsByName('modalEndTimeOption');
+    const modalRecurrence = document.getElementById('modalEventRecurrence');
 
     // Handle radio button toggle
     modalEndTimeOptions.forEach(radio => {
@@ -569,22 +562,64 @@ function setupEventModal() {
         });
     });
 
+    // Handle recurrence dropdown
+    modalRecurrence.addEventListener('change', (e) => {
+        if (e.target.value === 'none') {
+            modalRecurrenceEndSection.style.display = 'none';
+        } else {
+            modalRecurrenceEndSection.style.display = 'block';
+        }
+    });
+
     // Close modal
-    const closeModal = () => {
+    const closeModalFn = () => {
         modal.style.display = 'none';
         modalForm.reset();
         modalDurationSection.style.display = 'block';
         modalCustomEndSection.style.display = 'none';
+        modalRecurrenceEndSection.style.display = 'none';
         document.querySelector('input[name="modalEndTimeOption"][value="duration"]').checked = true;
+        document.getElementById('modalEventId').value = '';
+        document.getElementById('modalTitle').textContent = 'Create Event';
+        deleteBtn.style.display = 'none';
     };
 
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
+    closeBtn.addEventListener('click', closeModalFn);
+    cancelBtn.addEventListener('click', closeModalFn);
+
+    // Delete event
+    deleteBtn.addEventListener('click', async () => {
+        const eventId = parseInt(document.getElementById('modalEventId').value);
+        if (!eventId) return;
+
+        if (!confirm('Are you sure you want to delete this event?')) {
+            return;
+        }
+
+        try {
+            await db.delete('events', eventId);
+            await db.logActivity('event_deleted', `Deleted event ID: ${eventId}`, { eventId });
+            showToast('Event deleted successfully', 'success');
+            closeModalFn();
+            await loadEvents();
+            await updateAnalytics();
+
+            // Refresh current view
+            if (currentView === 'day' && selectedDayDate) {
+                await renderDayView(selectedDayDate);
+            } else {
+                await renderCalendar();
+            }
+        } catch (error) {
+            console.error('Error deleting event:', error);
+            showToast('Failed to delete event', 'error');
+        }
+    });
 
     // Close on background click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-            closeModal();
+            closeModalFn();
         }
     });
 
@@ -592,15 +627,20 @@ function setupEventModal() {
     modalForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         await handleModalEventSubmit();
-        closeModal();
+        closeModalFn();
     });
 }
 
 /**
- * Open Event Modal
+ * Open Event Modal (for creating new event)
  */
 function openEventModal(date, hour = null) {
     const modal = document.getElementById('eventModal');
+
+    // Reset form for new event
+    document.getElementById('modalTitle').textContent = 'Create Event';
+    document.getElementById('modalEventId').value = '';
+    document.getElementById('deleteEventBtn').style.display = 'none';
 
     // Populate date fields
     const year = date.getFullYear();
@@ -621,9 +661,80 @@ function openEventModal(date, hour = null) {
 }
 
 /**
+ * Open Event Modal For Editing
+ */
+function openEventModalForEdit(event) {
+    const modal = document.getElementById('eventModal');
+
+    // Set modal to edit mode
+    document.getElementById('modalTitle').textContent = 'Edit Event';
+    document.getElementById('modalEventId').value = event.id;
+    document.getElementById('deleteEventBtn').style.display = 'block';
+
+    // Populate all fields
+    document.getElementById('modalEventTitle').value = event.title;
+    document.getElementById('modalEventDescription').value = event.description || '';
+
+    // Parse start date/time
+    const startDate = new Date(event.startDate);
+    const startYear = startDate.getFullYear();
+    const startMonth = String(startDate.getMonth() + 1).padStart(2, '0');
+    const startDay = String(startDate.getDate()).padStart(2, '0');
+    const startHours = String(startDate.getHours()).padStart(2, '0');
+    const startMinutes = String(startDate.getMinutes()).padStart(2, '0');
+
+    document.getElementById('modalEventStartDate').value = `${startYear}-${startMonth}-${startDay}`;
+    document.getElementById('modalEventStartTime').value = `${startHours}:${startMinutes}`;
+
+    // Parse end date/time
+    const endDate = new Date(event.endDate);
+    const endYear = endDate.getFullYear();
+    const endMonth = String(endDate.getMonth() + 1).padStart(2, '0');
+    const endDay = String(endDate.getDate()).padStart(2, '0');
+    const endHours = String(endDate.getHours()).padStart(2, '0');
+    const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+
+    document.getElementById('modalEventEndDate').value = `${endYear}-${endMonth}-${endDay}`;
+    document.getElementById('modalEventEndTime').value = `${endHours}:${endMinutes}`;
+
+    // Set category
+    document.getElementById('modalEventCategory').value = event.category;
+
+    // Set recurrence
+    document.getElementById('modalEventRecurrence').value = event.recurrence || 'none';
+    if (event.recurrence && event.recurrence !== 'none') {
+        document.getElementById('modalRecurrenceEndSection').style.display = 'block';
+        if (event.recurrenceEnd) {
+            const recEndDate = new Date(event.recurrenceEnd);
+            const recYear = recEndDate.getFullYear();
+            const recMonth = String(recEndDate.getMonth() + 1).padStart(2, '0');
+            const recDay = String(recEndDate.getDate()).padStart(2, '0');
+            document.getElementById('modalRecurrenceEnd').value = `${recYear}-${recMonth}-${recDay}`;
+        }
+    } else {
+        document.getElementById('modalRecurrenceEndSection').style.display = 'none';
+    }
+
+    // Set location
+    document.getElementById('modalEventLocation').checked = !!event.location;
+
+    // Set duration vs custom based on if it's a simple duration
+    // For now, default to custom
+    document.querySelector('input[name="modalEndTimeOption"][value="custom"]').checked = true;
+    document.getElementById('modalDurationSection').style.display = 'none';
+    document.getElementById('modalCustomEndSection').style.display = 'block';
+
+    modal.style.display = 'flex';
+}
+
+/**
  * Handle Modal Event Submit
  */
 async function handleModalEventSubmit() {
+    // Check if editing or creating
+    const eventId = document.getElementById('modalEventId').value;
+    const isEditing = !!eventId;
+
     // Get start date and time
     const startDate = document.getElementById('modalEventStartDate').value;
     const startTime = document.getElementById('modalEventStartTime').value;
@@ -665,33 +776,109 @@ async function handleModalEventSubmit() {
         endDateTime = `${endDate}T${endTime}`;
     }
 
+    // Get recurrence settings
+    const recurrence = document.getElementById('modalEventRecurrence').value;
+    const recurrenceEnd = recurrence !== 'none' ? document.getElementById('modalRecurrenceEnd').value : null;
+
     const eventData = {
         title: document.getElementById('modalEventTitle').value,
         description: document.getElementById('modalEventDescription').value,
         startDate: startDateTime,
         endDate: endDateTime,
         category: document.getElementById('modalEventCategory').value,
-        location: document.getElementById('modalEventLocation').checked ? currentLocation : null
+        location: document.getElementById('modalEventLocation').checked ? currentLocation : null,
+        recurrence: recurrence,
+        recurrenceEnd: recurrenceEnd
     };
 
     try {
-        const eventId = await db.add('events', eventData);
-        await db.logActivity('event_created', `Created event: ${eventData.title}`, { eventId });
-
-        showToast('Event created successfully!', 'success');
+        if (isEditing) {
+            // Update existing event
+            eventData.id = parseInt(eventId);
+            await db.update('events', eventData);
+            await db.logActivity('event_updated', `Updated event: ${eventData.title}`, { eventId: eventData.id });
+            showToast('Event updated successfully!', 'success');
+        } else {
+            // Create new event(s)
+            if (recurrence !== 'none') {
+                // Generate recurring events
+                await generateRecurringEvents(eventData);
+                showToast('Recurring event created successfully!', 'success');
+            } else {
+                await db.add('events', eventData);
+                await db.logActivity('event_created', `Created event: ${eventData.title}`);
+                showToast('Event created successfully!', 'success');
+            }
+        }
 
         // Refresh views
         await loadEvents();
         await updateAnalytics();
 
-        // Refresh day view if showing
+        // Refresh current view
         if (currentView === 'day' && selectedDayDate) {
             await renderDayView(selectedDayDate);
+        } else {
+            await renderCalendar();
         }
     } catch (error) {
-        console.error('Error creating event:', error);
-        showToast('Failed to create event', 'error');
+        console.error('Error saving event:', error);
+        showToast('Failed to save event', 'error');
     }
+}
+
+/**
+ * Generate Recurring Events
+ */
+async function generateRecurringEvents(baseEvent) {
+    const startDate = new Date(baseEvent.startDate);
+    const endDate = new Date(baseEvent.endDate);
+    const eventDuration = endDate - startDate;
+
+    // Calculate when to stop creating events
+    const stopDate = baseEvent.recurrenceEnd ? new Date(baseEvent.recurrenceEnd) : new Date(startDate.getFullYear() + 1, startDate.getMonth(), startDate.getDate());
+
+    let currentDate = new Date(startDate);
+    const events = [];
+
+    // Generate events based on recurrence type
+    while (currentDate <= stopDate) {
+        const eventStartDate = new Date(currentDate);
+        const eventEndDate = new Date(currentDate.getTime() + eventDuration);
+
+        events.push({
+            ...baseEvent,
+            startDate: eventStartDate.toISOString().slice(0, 16),
+            endDate: eventEndDate.toISOString().slice(0, 16)
+        });
+
+        // Move to next occurrence
+        switch (baseEvent.recurrence) {
+            case 'daily':
+                currentDate.setDate(currentDate.getDate() + 1);
+                break;
+            case 'weekly':
+                currentDate.setDate(currentDate.getDate() + 7);
+                break;
+            case 'monthly':
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                break;
+            default:
+                return; // Stop if invalid recurrence
+        }
+
+        // Safety limit: don't create more than 365 events
+        if (events.length >= 365) {
+            break;
+        }
+    }
+
+    // Save all events
+    for (const event of events) {
+        await db.add('events', event);
+    }
+
+    await db.logActivity('recurring_events_created', `Created ${events.length} recurring events: ${baseEvent.title}`, { count: events.length });
 }
 
 /**

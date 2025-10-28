@@ -29,7 +29,8 @@
 
         <!-- Navigation Tabs -->
         <nav class="tab-nav">
-            <button class="tab-btn active" data-tab="events">📅 Events</button>
+            <button class="tab-btn active" data-tab="calendar">📆 Calendar</button>
+            <button class="tab-btn" data-tab="events">📝 Events</button>
             <button class="tab-btn" data-tab="reminders">📍 Reminders</button>
             <button class="tab-btn" data-tab="features">🎥 Features</button>
             <button class="tab-btn" data-tab="analytics">📊 Analytics</button>
@@ -38,8 +39,42 @@
         <!-- Main Content Area -->
         <main class="main-content">
 
+            <!-- Calendar Tab -->
+            <section id="calendar-tab" class="tab-content active">
+                <div class="calendar-header">
+                    <button id="prevMonth" class="calendar-nav-btn">‹</button>
+                    <h2 id="currentMonth">Loading...</h2>
+                    <button id="nextMonth" class="calendar-nav-btn">›</button>
+                </div>
+
+                <div class="calendar-controls">
+                    <button id="todayBtn" class="btn btn-secondary">Today</button>
+                    <div class="view-toggle">
+                        <button id="monthViewBtn" class="view-btn active">Month</button>
+                        <button id="weekViewBtn" class="view-btn">Week</button>
+                    </div>
+                </div>
+
+                <div class="calendar-legend">
+                    <span class="legend-item"><span class="legend-color category-work"></span> Work</span>
+                    <span class="legend-item"><span class="legend-color category-personal"></span> Personal</span>
+                    <span class="legend-item"><span class="legend-color category-shopping"></span> Shopping</span>
+                    <span class="legend-item"><span class="legend-color category-health"></span> Health</span>
+                    <span class="legend-item"><span class="legend-color category-social"></span> Social</span>
+                    <span class="legend-item"><span class="legend-color category-other"></span> Other</span>
+                </div>
+
+                <div id="calendarGrid" class="calendar-grid">
+                    <!-- Calendar will be rendered here by JavaScript -->
+                </div>
+
+                <div id="weekView" class="week-view" style="display: none;">
+                    <!-- Week view will be rendered here -->
+                </div>
+            </section>
+
             <!-- Events Tab -->
-            <section id="events-tab" class="tab-content active">
+            <section id="events-tab" class="tab-content">
                 <h2>Calendar Events</h2>
 
                 <div class="card">

@@ -886,7 +886,14 @@ async function handleModalEventSubmit() {
             eventData.id = parseInt(eventId);
             await db.update('events', eventData);
             await db.logActivity('event_updated', `Updated event: ${eventData.title}`, { eventId: eventData.id });
-            showToast('Event updated successfully!', 'success');
+
+            // If recurrence was added, generate future instances
+            if (recurrence !== 'none') {
+                await generateRecurringEventsFromExisting(eventData);
+                showToast('Event updated with recurrence!', 'success');
+            } else {
+                showToast('Event updated successfully!', 'success');
+            }
         } else {
             // Create new event(s)
             if (recurrence !== 'none') {
@@ -968,6 +975,79 @@ async function generateRecurringEvents(baseEvent) {
     }
 
     await db.logActivity('recurring_events_created', `Created ${events.length} recurring events: ${baseEvent.title}`, { count: events.length });
+}
+
+/**
+ * Generate Recurring Events From Existing Event
+ * (Used when editing an event to add recurrence)
+ */
+async function generateRecurringEventsFromExisting(baseEvent) {
+    const startDate = new Date(baseEvent.startDate);
+    const endDate = new Date(baseEvent.endDate);
+    const eventDuration = endDate - startDate;
+
+    // Calculate when to stop creating events
+    const stopDate = baseEvent.recurrenceEnd ? new Date(baseEvent.recurrenceEnd) : new Date(startDate.getFullYear() + 1, startDate.getMonth(), startDate.getDate());
+
+    // Start from the NEXT occurrence (not the current event)
+    let currentDate = new Date(startDate);
+
+    // Move to first future occurrence
+    switch (baseEvent.recurrence) {
+        case 'daily':
+            currentDate.setDate(currentDate.getDate() + 1);
+            break;
+        case 'weekly':
+            currentDate.setDate(currentDate.getDate() + 7);
+            break;
+        case 'monthly':
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            break;
+        default:
+            return; // Stop if invalid recurrence
+    }
+
+    const events = [];
+
+    // Generate future recurring events (excluding the current one which already exists)
+    while (currentDate <= stopDate) {
+        const eventStartDate = new Date(currentDate);
+        const eventEndDate = new Date(currentDate.getTime() + eventDuration);
+
+        events.push({
+            ...baseEvent,
+            id: undefined, // Remove the id so it creates new events
+            startDate: eventStartDate.toISOString().slice(0, 16),
+            endDate: eventEndDate.toISOString().slice(0, 16)
+        });
+
+        // Move to next occurrence
+        switch (baseEvent.recurrence) {
+            case 'daily':
+                currentDate.setDate(currentDate.getDate() + 1);
+                break;
+            case 'weekly':
+                currentDate.setDate(currentDate.getDate() + 7);
+                break;
+            case 'monthly':
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                break;
+            default:
+                return; // Stop if invalid recurrence
+        }
+
+        // Safety limit: don't create more than 365 events
+        if (events.length >= 365) {
+            break;
+        }
+    }
+
+    // Save all future events
+    for (const event of events) {
+        await db.add('events', event);
+    }
+
+    await db.logActivity('recurring_events_generated', `Generated ${events.length} future recurring events from edited event: ${baseEvent.title}`, { count: events.length });
 }
 
 /**

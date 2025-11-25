@@ -5,7 +5,9 @@
   "main": "index.html",
   "scripts": {
     "start": "npx http-server -p 8000 -c-1",
-    "dev": "npx http-server -p 8000 -c-1 -o"
+    "dev": "npx http-server -p 8000 -c-1 -o",
+    "generate-icons": "node scripts/generate-icons.js",
+    "build": "node scripts/build.js"
   },
   "keywords": [
     "pwa",
@@ -19,6 +21,8 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "http-server": "^14.1.1"
+    "http-server": "^14.1.1",
+    "sharp": "^0.33.0",
+    "terser": "^5.31.0"
   }
 }

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA Icon Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2196F3;
+      margin-top: 0;
+    }
+    button {
+      background: #2196F3;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #1976D2;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      background: #e3f2fd;
+      border-left: 4px solid #2196F3;
+    }
+    .success {
+      background: #e8f5e9;
+      border-left-color: #4CAF50;
+    }
+    .error {
+      background: #ffebee;
+      border-left-color: #f44336;
+    }
+    .preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .preview-item {
+      text-align: center;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 5px;
+    }
+    .preview-item img {
+      display: block;
+      margin-bottom: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .preview-item small {
+      color: #666;
+    }
+    #canvas {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 PWA Icon Generator</h1>
+    <p>This tool will generate all required PNG icons from the icon.svg file.</p>
+
+    <button id="generateBtn" onclick="generateAllIcons()">Generate All Icons</button>
+    <button id="downloadBtn" onclick="downloadAll()" disabled>Download All</button>
+
+    <div id="status"></div>
+    <div id="preview" class="preview"></div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    const generatedIcons = {};
+
+    async function loadSVG() {
+      const response = await fetch('icon.svg');
+      const svgText = await response.text();
+      return svgText;
+    }
+
+    function svgToDataURL(svgText, width, height) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+          const canvas = document.getElementById('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+
+          // Clear canvas
+          ctx.clearRect(0, 0, width, height);
+
+          // Draw SVG
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to PNG
+          const dataURL = canvas.toDataURL('image/png');
+          URL.revokeObjectURL(url);
+          resolve(dataURL);
+        };
+
+        img.onerror = (err) => {
+          URL.revokeObjectURL(url);
+          reject(err);
+        };
+
+        img.src = url;
+      });
+    }
+
+    async function generateAllIcons() {
+      const statusDiv = document.getElementById('status');
+      const previewDiv = document.getElementById('preview');
+      const generateBtn = document.getElementById('generateBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+
+      generateBtn.disabled = true;
+      statusDiv.innerHTML = '<p>⏳ Loading SVG and generating icons...</p>';
+      previewDiv.innerHTML = '';
+
+      try {
+        const svgText = await loadSVG();
+
+        for (const size of sizes) {
+          statusDiv.innerHTML = `<p>⏳ Generating ${size}x${size} icon...</p>`;
+
+          const dataURL = await svgToDataURL(svgText, size, size);
+          generatedIcons[size] = dataURL;
+
+          // Add preview
+          const previewItem = document.createElement('div');
+          previewItem.className = 'preview-item';
+          previewItem.innerHTML = `
+            <img src="${dataURL}" width="${Math.min(size, 128)}" height="${Math.min(size, 128)}" alt="${size}x${size}">
+            <small>${size}x${size}</small>
+          `;
+          previewDiv.appendChild(previewItem);
+        }
+
+        statusDiv.className = 'status success';
+        statusDiv.innerHTML = `
+          <p>✅ Successfully generated ${sizes.length} icons!</p>
+          <p>Click "Download All" to save them, or click individual icons below to download separately.</p>
+        `;
+        downloadBtn.disabled = false;
+        generateBtn.disabled = false;
+
+      } catch (error) {
+        statusDiv.className = 'status error';
+        statusDiv.innerHTML = `<p>❌ Error: ${error.message}</p>`;
+        generateBtn.disabled = false;
+      }
+    }
+
+    function downloadDataURL(dataURL, filename) {
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = dataURL;
+      link.click();
+    }
+
+    function downloadAll() {
+      for (const size of sizes) {
+        if (generatedIcons[size]) {
+          setTimeout(() => {
+            downloadDataURL(generatedIcons[size], `icon-${size}.png`);
+          }, size / 10); // Stagger downloads
+        }
+      }
+    }
+
+    // Add click handlers to preview items for individual downloads
+    document.addEventListener('click', (e) => {
+      if (e.target.tagName === 'IMG' && e.target.closest('.preview-item')) {
+        const size = e.target.alt.split('x')[0];
+        if (generatedIcons[size]) {
+          downloadDataURL(generatedIcons[size], `icon-${size}.png`);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

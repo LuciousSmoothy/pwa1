@@ -38,30 +38,118 @@ A Progressive Web Application that demonstrates mobile device feature access inc
 
 ## Installation
 
-### Option 1: Run Locally
+### Development Setup
 
 1. Clone this repository
-2. Serve the files using a local web server:
+2. Install dependencies:
 
 ```bash
-# Using Python 3
+npm install
+```
+
+3. Generate PWA icons (if not already present):
+
+```bash
+npm run generate-icons
+```
+
+4. Start the development server:
+
+```bash
+npm run dev
+```
+
+5. Open your browser to `http://localhost:8000`
+
+### Production Build
+
+To create a production-ready build optimized for deployment:
+
+```bash
+npm run build
+```
+
+This will:
+- ✅ Minify all JavaScript files (reduces size by ~40%)
+- ✅ Remove all console.log statements
+- ✅ Update service worker cache version automatically
+- ✅ Copy all necessary assets to `./dist` directory
+- ✅ Generate build info file
+
+Deploy the contents of the `./dist` directory to your web server.
+
+### Quick Start (No Build)
+
+You can also run the app directly without building:
+
+```bash
+# Using the npm script
+npm start
+
+# Or using Python 3
 python -m http.server 8000
 
-# Using Node.js (http-server)
-npx http-server -p 8000
-
-# Using PHP
+# Or using PHP
 php -S localhost:8000
 ```
 
-3. Open your browser to `http://localhost:8000`
-
-### Option 2: Install as PWA
+### Install as PWA
 
 1. Open the app in a supported browser (Chrome, Edge, Safari, etc.)
 2. Look for the "Install App" button in the header
 3. Click to install to your home screen
 4. Use like a native app!
+
+## Deployment
+
+### Pre-Deployment Checklist
+
+Before deploying to production, ensure:
+
+- ✅ All PWA icons are generated (`npm run generate-icons`)
+- ✅ Production build is created (`npm run build`)
+- ✅ HTTPS is configured on your web server (required for PWAs)
+- ✅ Proper MIME types are set (especially for `.webmanifest` files)
+- ✅ Service worker is accessible from root path
+
+### Deployment Steps
+
+1. **Build the production version:**
+   ```bash
+   npm run build
+   ```
+
+2. **Deploy the `dist` directory** to your web server:
+   - Upload all files from `./dist` to your web root
+   - Ensure HTTPS is enabled (required for service workers)
+   - Verify manifest.json is accessible
+
+3. **Recommended server configuration:**
+   ```nginx
+   # Example Nginx configuration
+   location /service-worker.js {
+     add_header Cache-Control "no-cache, no-store, must-revalidate";
+     add_header Pragma "no-cache";
+     add_header Expires "0";
+   }
+   ```
+
+### Deployment Platforms
+
+This PWA can be deployed to:
+- **GitHub Pages**: Free HTTPS hosting
+- **Netlify**: Automatic deployments from Git
+- **Vercel**: Optimized for static sites
+- **Firebase Hosting**: Google's static hosting
+- **Any static web server** with HTTPS support
+
+### Post-Deployment Verification
+
+1. Open the deployed app in Chrome DevTools
+2. Check the **Application** tab → **Manifest**
+3. Verify **Service Worker** is registered
+4. Test **Add to Home Screen** functionality
+5. Confirm **offline mode** works after initial load
 
 ## Browser Compatibility
 
@@ -82,14 +170,22 @@ php -S localhost:8000
 
 ```
 pwa1/
-├── index.html          # Main HTML file
-├── manifest.json       # PWA manifest
-├── service-worker.js   # Service worker for offline support
-├── app.js             # Main application logic
-├── db.js              # IndexedDB wrapper
-├── styles.css         # Styling
-├── icons/             # App icons (various sizes)
-└── README.md          # This file
+├── index.html              # Main HTML file
+├── manifest.json           # PWA manifest
+├── service-worker.js       # Service worker for offline support
+├── app.js                  # Main application logic
+├── db.js                   # IndexedDB wrapper
+├── styles.css              # Styling
+├── package.json            # NPM dependencies and scripts
+├── icons/                  # App icons (various sizes)
+│   ├── icon.svg           # Source SVG icon
+│   ├── icon-*.png         # Generated PNG icons
+│   └── generate-icons.html # Browser-based icon generator
+├── scripts/                # Build and utility scripts
+│   ├── generate-icons.js  # Node script to generate icons
+│   └── build.js           # Production build script
+├── dist/                   # Production build output (generated)
+└── README.md              # This file
 ```
 
 ## How to Use
